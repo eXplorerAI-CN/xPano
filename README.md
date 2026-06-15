@@ -107,6 +107,29 @@ This is the core conversion engine of the xPano workflow. Running the `export_co
 scripts/export_colmap.py
 ```
 
+#### Prerequisite (Installing Bundled Python Dependencies)
+
+Since Agisoft Metashape runs within its own bundled Python environment rather than the system's global Python environment, running `pip install opencv-python` in your standard terminal will lead to a `ModuleNotFoundError: No module named 'cv2'` error.
+
+Before running the script, please open your Terminal or Command Prompt (with Administrator privileges on Windows) and execute the corresponding command to install the required dependency into Metashape's dedicated environment:
+
+* **Windows (Default Path):**
+  ```bash
+  "C:\Program Files\Agisoft\Metashape Pro\python\python.exe" -m pip install opencv-python
+  ```
+* **Windows (Custom or Portable Path Example):**
+  ```bash
+  "D:\3DGS\Metashape 2.3.1\App\Metashape\python\python.exe" -m pip install opencv-python
+  ```
+* **macOS:**
+  ```bash
+  /Applications/MetashapePro.app/Contents/MacOS/python/bin/python3 -m pip install opencv-python
+  ```
+* **Linux:**
+  ```bash
+  ./metashape-pro/python/bin/python -m pip install opencv-python
+  ```
+
 For standard perspective cameras (Frame), the script applies the optimized calibration parameters to perform radial and tangential undistortion, outputting clean perspective images.
 
 For dual-fisheye cameras, the script uses the center of each Camera Station as an origin to render 5 virtual perspective views at $90^\circ$ orthogonal angles: **Front, Left, Right, Top, and Bottom**.
