@@ -102,6 +102,28 @@ scripts/align_ground_plane.py
 # 在 Metashape 中通过 Run Script 执行该文件
 scripts/export_colmap.py
 ```
+#### 运行前准备（内置 Python 依赖安装）
+
+由于 Metashape 运行在软件内置的独立 Python 嵌入式环境中，而非系统的全局 Python 环境。直接在普通的系统终端运行 `pip install opencv-python` 会导致脚本运行时抛出 `ModuleNotFoundError: No module named 'cv2'` 错误。
+
+在运行脚本前，请使用管理员权限打开命令提示符（cmd）或终端，运行以下对应命令将依赖库安装至 Metashape 专属环境中：
+
+* **Windows (默认安装路径):**
+  ```bash
+  "C:\Program Files\Agisoft\Metashape Pro\python\python.exe" -m pip install opencv-python
+  ```
+* **Windows (自定义或绿色版路径例):**
+  ```bash
+  "D:\3DGS\Metashape 2.3.1\App\Metashape\python\python.exe" -m pip install opencv-python
+  ```
+* **macOS:**
+  ```bash
+  /Applications/MetashapePro.app/Contents/MacOS/python/bin/python3 -m pip install opencv-python
+  ```
+* **Linux:**
+  ```bash
+  ./metashape-pro/python/bin/python -m pip install opencv-python
+  ```
 
 对于传统的透视相机（Frame），脚本会自动应用计算好的标定内参对其进行高质量的径向与切向畸变剔除，输出纯净的无畸变图像。
 
