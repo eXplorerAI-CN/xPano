@@ -1,0 +1,53 @@
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Local agent memory
+.learnings/
+
+# xPano generated outputs
+work/
+frames/
+sparse/
+*_output/
+*_outputs/
+_acceptance*/
+_tracks*/
+_tmp*/
+xpano_alignment_summary.txt
+xpano_run_summary.json
+xpano_gui_error.log
+*.psx
+*.psx.files/
+*.psz
+
+# Local launch artifacts
+*.lnk
+
+# Historical local copy, not part of the release root
+download/
+
+# Large raw media and reconstruction artifacts
+*.osv
+*.insv
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.ply
+*.las
+*.laz
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

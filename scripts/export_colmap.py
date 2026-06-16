@@ -262,17 +262,37 @@ def threaded_remap_and_save(img_src, mx, my, file_path):
             with open(file_path, "wb") as f: f.write(buffer)
     except: pass
 
+def project_track_to_pinhole(point_xyz, R, T, fx, fy, cx, cy, width, height):
+    X = np.array(point_xyz, dtype=np.float64)
+    pc = R @ X + T
+    if pc[2] <= 1e-8:
+        return None
+    u = fx * (pc[0] / pc[2]) + cx
+    v = fy * (pc[1] / pc[2]) + cy
+    if 0 <= u < width and 0 <= v < height:
+        return (float(u), float(v))
+    return None
+
+def camera_projections(chunk, camera):
+    if not chunk.tie_points:
+        return []
+    try:
+        return chunk.tie_points.projections[camera]
+    except KeyError:
+        return []
+
 # ==========================================
 # 3. 缝合调度与二进制写入
 # ==========================================
-def run_mixed_export():
+def run_mixed_export(out_dir=None):
     doc = Metashape.app.document
     chunk = doc.chunk
     if not chunk: 
         print("错误：没有有效 Chunk！")
         return
 
-    out_dir = Metashape.app.getExistingDirectory("选择混合导出文件夹")
+    if out_dir is None:
+        out_dir = Metashape.app.getExistingDirectory("选择混合导出文件夹")
     if not out_dir: return
 
     sparse_dir = os.path.join(out_dir, "sparse", "0")
@@ -288,8 +308,16 @@ def run_mixed_export():
     cam_id_acc = 1
     img_id_acc = 1
 
+    valid_cameras = [c for c in chunk.cameras if c.transform and c.sensor and c.sensor.calibration and c.enabled]
+    used_sensors = []
+    used_sensor_keys = set()
+    for camera in valid_cameras:
+        if camera.sensor.key not in used_sensor_keys:
+            used_sensors.append(camera.sensor)
+            used_sensor_keys.add(camera.sensor.key)
+
     print(">>> [1/4] 开始扫描相机模型...", flush=True)
-    for sensor in chunk.sensors:
+    for sensor in used_sensors:
         sensor_info_str = str(sensor.type)
         if sensor.calibration:
             sensor_info_str += " " + str(sensor.calibration.type)
@@ -344,7 +372,6 @@ def run_mixed_export():
         'bottom':np.array([[1,0,0],[0,0,-1],[0,1,0]])
     }
 
-    valid_cameras = [c for c in chunk.cameras if c.transform and c.sensor and c.sensor.calibration and c.enabled]
     total_cams = len(valid_cameras)
     
     for idx, camera in enumerate(valid_cameras):
@@ -378,14 +405,13 @@ def run_mixed_export():
 
             pts2d = []
             T1_inv = T1.inv()
-            if chunk.tie_points:
-                for proj in chunk.tie_points.projections[camera]:
-                    track_id = proj.track_id
-                    if track_id in points3d_list:
-                        pt2d = calib1.project(T1_inv.mulp(calib0.unproject(proj.coord)))
-                        if pt2d and 0 <= pt2d.x < calib1.width and 0 <= pt2d.y < calib1.height:
-                            pts2d.append((pt2d.x, pt2d.y, track_id))
-                            points3d_list[track_id]['refs'].append((img_id_acc, len(pts2d) - 1))
+            for proj in camera_projections(chunk, camera):
+                track_id = proj.track_id
+                if track_id in points3d_list:
+                    pt2d = calib1.project(T1_inv.mulp(calib0.unproject(proj.coord)))
+                    if pt2d and 0 <= pt2d.x < calib1.width and 0 <= pt2d.y < calib1.height:
+                        pts2d.append((pt2d.x, pt2d.y, track_id))
+                        points3d_list[track_id]['refs'].append((img_id_acc, len(pts2d) - 1))
 
             colmap_imgs.append({
                 'id': img_id_acc, 'Q': Q, 'T': T, 'cid': cid, 'name': img_name, 'pts2d': pts2d
@@ -412,10 +438,25 @@ def run_mixed_export():
                 
                 rf, tf = R_faces[face] @ R_w2c, R_faces[face] @ T_w2c
                 qw, qx, qy, qz = matrix_to_quat(Metashape.Matrix(rf.tolist()))
+                fw, fh, vcx, vcy = get_face_configs(opt_W)[face]
+                img_id = img_id_acc
+                pts2d = []
+
+                fx = fy = opt_W / 2.0
+                for proj in camera_projections(chunk, camera):
+                    track_id = proj.track_id
+                    point = points3d_list.get(track_id)
+                    if point is None:
+                        continue
+                    uv = project_track_to_pinhole(point['xyz'], rf, tf, fx, fy, vcx, vcy, fw, fh)
+                    if uv is None:
+                        continue
+                    pts2d.append((uv[0], uv[1], track_id))
+                    point['refs'].append((img_id, len(pts2d) - 1))
                 
                 colmap_imgs.append({
                     'id': img_id_acc, 'Q': Metashape.Vector([qw, qx, qy, qz]), 'T': Metashape.Vector([tf[0], tf[1], tf[2]]), 
-                    'cid': cid, 'name': img_name, 'pts2d': []
+                    'cid': cid, 'name': img_name, 'pts2d': pts2d
                 })
                 img_id_acc += 1
 
@@ -431,6 +472,8 @@ def run_mixed_export():
                 concurrent.futures.wait(cam_tasks)
 
     executor.shutdown()
+
+    points3d_list = {track_id: point for track_id, point in points3d_list.items() if point['refs']}
 
     print(">>> [4/4] 写入 COLMAP 二进制文件...", flush=True)
     with open(os.path.join(sparse_dir, "cameras.bin"), "wb") as fout:
@@ -461,9 +504,17 @@ def run_mixed_export():
                 fout.write(u32(ref[0])); fout.write(u32(ref[1]))
 
     print(">>> 运行完毕！", flush=True)
-    Metashape.app.messageBox("混合导出完成！请检查输出文件夹。")
+    try:
+        Metashape.app.messageBox("混合导出完成！请检查输出文件夹。")
+    except Exception:
+        print("混合导出完成！请检查输出文件夹。", flush=True)
 
 if __name__ == "__main__":
     print("====================================", flush=True)
     print("开始执行 3DGS 混合导出脚本...", flush=True)
-    run_mixed_export()
+    export_arg = None
+    if "--export-dir" in sys.argv:
+        idx = sys.argv.index("--export-dir")
+        if idx + 1 < len(sys.argv):
+            export_arg = sys.argv[idx + 1]
+    run_mixed_export(export_arg)
