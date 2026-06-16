@@ -1,141 +1,223 @@
-# xPano: High-Fidelity 3D Reconstruction Workflow for 360° Cameras
+# xPano Multi-Track GUI
 
-[![version](https://img.shields.io/badge/version-0.1.0-blue.svg)](#)
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](#)
+面向 360 全景视频、普通照片和航拍照片的 Metashape 自动化重建工具。
 
-xPano is an end-to-end 3D reconstruction alignment and data conversion workflow designed specifically for dual-lens 360° cameras (such as Insta360, DJI Osmo 360, etc.).
+本项目基于 xPano 的核心思想继续扩展：对齐阶段直接使用 `.osv` / `.insv` 原始双鱼眼帧，不先拼接 ERP，也不先切 cubemap；在 Metashape 中先用 `Station` 约束完成稀疏对齐，再释放为 `Folder` 优化，最后导出 COLMAP 结构给 3D Gaussian Splatting、NeRF 或其他重建流程使用。
 
-Traditional panoramic reconstruction pipelines often rely on proprietary software to stitch dual-fisheye frames into Equirectangular Projection (ERP) panoramas, which are then sliced into several perspective images at specific offset angles. This practice introduces irreversible non-linear distortions and stitching seams in computer vision and photogrammetry. xPano redefines this approach by using raw dual-fisheye images directly for aerial triangulation (Structure from Motion). It locks geometric fidelity through rigorous Camera Station constraints and physical camera calibration. Once the sparse reconstruction is aligned, it utilizes a reverse-projection remapping algorithm to slice the fisheye frames into high-quality Virtual Cubemaps, seamlessly adapting to downstream 3D Gaussian Splatting (3DGS) and Neural Radiance Fields (NeRF) pipelines.
+把 xPano/Metashape 操作流程封装成一个可复现的一键 GUI 和 CLI。
 
-[中文文档](README.zh-CN.md)
+## 功能状态
 
-![Workflow Overview](images/workflow_overview.png)
+已验证：
 
----
+- 选择 `.osv` / `.insv` 全景视频。
+- 按秒/帧抽取左右双鱼眼帧，默认 `1.0` 秒/帧。
+- 自动建立每帧左右鱼眼 Camera Station。
+- 自动调用 Metashape 完成匹配、对齐、优化和工程保存。
+- 全景传感器使用 `Fisheye`，像元尺寸 `0.0024 mm`，焦距 `2.5 mm`。
+- 固定 `B1`、`B2`、`K4`，并在对齐后从 `Station` 释放回 `Folder`。
+- 导出 COLMAP：`images/` 和 `sparse/0/{cameras.bin, images.bin, points3D.bin}`。
+- GUI 进度显示、抽帧预览和日志输出。
 
-## The Core Philosophy: Why We Avoid Stitched Panoramas (ERP)
+实验性支持：
 
-While stitched panoramas perform exceptionally in visual presentation, they are a disastrous data source in rigorous photogrammetry and bundle adjustment. A 360° camera is physically composed of two back-to-back fisheye lenses separated by a baseline of a few centimeters. To eliminate visual stitching artifacts, stitching software applies dynamic optical flow warping and non-rigid local stretching to force-align the seams. This warping is mathematically arbitrary and non-physical, completely violating the inherent collinearity equations of optical lenses. Reconstruction algorithms cannot establish a stable camera calibration model to fit such dynamically altered imagery, ultimately causing the reconstructed sparse tie points to drift and double near the stitching seams, or even causing systemic bending of the camera trajectory.
+- 普通照片轨道：作为 `Frame` 相机导入，同一 COLMAP 模型导出。
+- 航拍照片轨道：作为 `Frame` 相机导入，同一 COLMAP 模型导出。
+- 多轨道混合：全景、普通照片、航拍照片进入同一个 Metashape chunk 共同对齐。
 
-Furthermore, Equirectangular Projection (ERP) exhibits severe polar stretching singularities. When the spherical coordinates are mapped onto a 2D plane, the polar regions (zenith and nadir) suffer from massive pixel stretching. This extreme pixel expansion causes feature extractors to capture a large number of meaningless elongated lines, resulting in severe noise and structural collapse in the sky and ground regions of the 3D reconstruction.
+混合轨道的导入结构、相机类型和导出结构已经有测试覆盖，但真实同场景“全景 + 手机/航拍”对齐质量仍需要更多数据验收。
 
-Similarly, workflows that pre-slice a stitched ERP panorama into multiple perspective images before performing alignment introduce major computational inefficiencies. Slicing each panorama into 4 to 8 perspective frames prior to alignment scales up the total number of images exponentially. In photogrammetry, the computational complexity of feature matching and bundle adjustment grows geometrically with the image count. Aligning massive numbers of pre-sliced perspective images directly leads to exceedingly long processing times, and often causes system crashes due to memory exhaustion.
+## 为什么这样做
 
-Slicing before alignment also encounters a geometric bottleneck in weak-feature areas like the sky. When slicing a panorama, users typically extract a horizontal ring of perspective images. Even with vertical pitch adjustments, the absolute zenith (directly overhead) remains a challenge. The sky contains virtually no stable, extractable feature points. If sky-facing slices are matched as independent cameras, the bundle adjustment solver fails to locate them due to the absence of valid tie points, causing these slices to either fail to align or drift randomly in 3D space, corrupting the camera trajectory.
+传统 360 重建常见流程是：
 
-xPano bypasses these limitations by performing the initial sparse alignment on the raw `.insv` or `.osv` dual-fisheye images directly. Only two fisheye images per frame enter the initial bundle adjustment, keeping the total image count minimal and reducing alignment times by several orders of magnitude. Under the strong physical constraint of a "Camera Station," the featureless sky regions (located at the periphery of the fisheye lens) and the feature-rich ground or wall regions (located in the center of the same fisheye frame) are rigidly locked within the same sensor's coordinate system. This allows the camera poses of featureless sky regions to be solved implicitly through the physical rigidity of the camera body, without relying on unstable sky feature points.
+1. 原始双鱼眼视频先拼接成 ERP 全景图。
+2. ERP 再切成多张透视图。
+3. 用这些透视图做 SfM/3DGS。
 
-Once the camera trajectory is aligned and locked, the virtual cubemap slicing is executed as a post-processing step during the final COLMAP export. This moves the heavy calculations of slicing and undistortion to a single-pass linear pixel resampling phase, removing them from the iterative bundle adjustment loop. This not only yields major speed gains but also ensures that the exported perspective images possess highly accurate poses, eliminating systematic geometric errors caused by non-rigid stitching and polar stretching.
+这个流程容易引入非物理形变：拼接软件为了视觉无缝会做光流拉伸，ERP 顶底也有严重极区拉伸。把这些图再交给摄影测量软件做 bundle adjustment，等于让优化器拟合已经被非刚性处理过的图像，容易导致点云漂移、轨迹弯曲、接缝附近重影。
 
----
+本项目采用相反策略：
 
-## Quick Start and Operational Guide
+1. 对齐阶段只使用原始左右鱼眼。
+2. 同一时刻左右鱼眼先设为 Metashape `Station`，帮助初始化。
+3. 初始对齐完成后释放为 `Folder`，让优化器恢复真实双镜头小基线。
+4. 对齐完成后才做 cubemap/undistort 导出。
 
-### Step 1: Video Frame Extraction and Camera Station Archiving
+这样可以减少对齐图像数量，避免 ERP/拼接形变进入空三，并让导出的透视图继承已经优化好的相机姿态。
 
-Run the provided `pano_extractor.py` script to scan and extract synchronized frames from raw `.insv` or `.osv` panoramic video streams in your working directory.
+## 依赖
 
-```bash
-python scripts/pano_extractor.py
+Windows 环境：
+
+- Python 3.10+。
+- ffmpeg，并确保 `ffmpeg.exe` 在 `PATH` 中。
+- Agisoft Metashape，并确保 `metashape.exe` 在 `PATH` 中，或设置环境变量 `XPANO_METASHAPE` 指向完整路径。
+
+Python 依赖：
+
+- GUI/抽帧侧：见 `requirements.txt`。
+- Metashape Python 侧：见 `metashape_requirements.txt`。
+
+一键安装：
+
+```powershell
+INSTALL_DEPS.bat
 ```
 
-The script extracts the images and automatically creates a dedicated subfolder for each frame, grouping the corresponding left and right fisheye images together. In photogrammetry, this is referred to as a "Camera Station." The relative pose of the dual lenses is physically fixed. Grouping the synchronized left and right fisheyes under the same Camera Station allows the alignment solver to utilize a strong physical prior during the subsequent sparse reconstruction.
+安装脚本会：
 
----
+- 检查 `ffmpeg.exe`。
+- 安装普通 Python 依赖。
+- 查找 `metashape.exe`。
+- 使用 Metashape 自带 Python 安装导出所需依赖。
 
-### Step 2: Metashape Import and Physical Calibration Anchor
+## 快速使用
 
-Import the generated Camera Station directory structure into Agisoft Metashape. Before running the alignment, you must manually configure the camera calibration parameters. This step is critical to achieving stable alignment and geometric accuracy.
+启动 GUI：
 
-Open the `Tools -> Camera Calibration` window. In the General tab, change the **Camera Type** from the default Frame to **Fisheye**.
-
-Manually input the initial physical parameters in the General tab: set the **Pixel Size (mm)** to **0.0024** and the **Focal Length (mm)** to **2.5**.
-
-![Calibration Settings](images/camera_calibration_general.png)
-
-This step provides the non-linear bundle adjustment solver with a physically plausible initial focal length ($Initial\ Value$). While individual cameras exhibit minor manufacturing tolerances, entering these values ensures that the initial pixel focal length ($f$) calculated by the software is in the correct order of magnitude. This prevents the solver from converging to a local minimum when EXIF data is missing, which often manifests as a curved "banana" reconstruction or stratified point clouds.
-
-$$f_{\text{pixel}} = \frac{f_{\text{mm}}}{\text{Pixel Size}_{\text{mm}}}$$
-
-Next, switch to the **Initial** tab to enforce strict parameter locking:
-- Set **B1, B2, and K4** to **0** and **check the corresponding "Fix" boxes** to lock them completely.
-- Keep the focal length (F), pixel size, principal point (cx, cy), and **P1, P2, K1, K2, K3** as adjustable/optimizable parameters.
-
-![Calibration Settings](images/camera_calibration_initial.png)
-
-Modern panoramic lenses are manufactured to high precision. The parameters B1 and B2, which describe thin-prism de-centering distortion, are physically negligible in consumer-grade sensors. Allowing the software to optimize B1 and B2 often leads to overfitting, where the solver absorbs image noise and destabilizes the camera calibration. Similarly, for consumer fisheye lenses, third-order radial distortion parameters K1, K2, and K3 provide sufficient degrees of freedom to model the optical curvature. The higher-order K4 parameter tends to correlate heavily with K3, causing parameter oscillation. Locking K4 stabilizes the radial distortion curve and accelerates bundle adjustment convergence.
-
----
-
-### Step 3: Multi-Stage Sparse Alignment (From Station to Folder)
-
-The relative orientation between dual-lens systems is highly sensitive. Forcing a rigid Camera Rig constraint during the initial alignment can cause the alignment to fail if the initial relative pose calibration is slightly off. To bypass this, xPano uses a two-stage alignment strategy: "constrain first, release later."
-
-**Stage 1:** Before running the alignment, select all imported cameras, right-click, and change their **Group Type** to **Station**. This mathematically constrains the physical centers of the left and right cameras to the exact same spatial coordinate, allowing only rotational differences.
-
-![Calibration Settings](images/camera_station.png)
-
-Under this constraint, run **Align Photos** and set the **Tie Point Limit** to **0** (unlimited). The solver will establish a global coordinate framework with high efficiency, anchoring the camera poses securely.
-
-![Calibration Settings](images/align_photos.png)
-
-**Stage 2:** Once the initial sparse alignment is successful, select all camera groups in the Workspace and change their **Group Type** back to **Folder** (releasing the zero-baseline constraint). Then, click **Tools -> Optimize Cameras**. The solver will now optimize the camera poses to resolve the actual minor physical baseline offset and precise individual rotations. This two-stage strategy avoids initialization failures and recovers the true physical trajectory.
-
----
-
-### Step 4: RANSAC-Based Automatic Coordinate and Ground Plane Correction
-
-In reconstructions without GPS metadata, the sparse point cloud is generated with arbitrary orientation and is often tilted or upside down. To correct this and align the scene with standard 3D rendering coordinate systems, run the `align_ground_plane.py` script.
-
-```bash
-# Execute within the Metashape scripting console or menu
-scripts/align_ground_plane.py
+```powershell
+RUN_GUI.bat
 ```
 
-The script scans the sparse tie points and fits a ground plane using the RANSAC (Random Sample Consensus) algorithm. If you manually select a group of ground points in the interface before running the script, it will prioritize those selected points for high-precision fitting.
+调试模式启动：
 
-Once the ground plane is determined, the script calculates the average center of all cameras to verify the "cameras above ground" physical reality, automatically flipping the normal vector if necessary to ensure "up" is oriented correctly. It then detects perpendicular vertical planes (such as walls) to define the primary forward direction. Finally, the script applies a coordinate transformation matrix to center the scene at the origin, adjust the bounding box (Region), and optionally convert the coordinate system to the **Y-Up** standard utilized by WebGL and 3DGS renderers.
-
----
-
-### Step 5: Virtual Cubemap Rendering and Perfect COLMAP Export
-
-This is the core conversion engine of the xPano workflow. Running the `export_colmap.py` script transforms your aligned, calibrated fisheye dataset into undistorted perspective camera outputs in COLMAP format.
-
-```bash
-# Run this script within Metashape using the "Run Script" command
-scripts/export_colmap.py
+```powershell
+RUN_GUI_DEBUG.bat
 ```
 
-#### Prerequisite (Installing Bundled Python Dependencies)
+GUI 流程：
 
-Since Agisoft Metashape runs within its own bundled Python environment rather than the system's global Python environment, running `pip install opencv-python` in your standard terminal will lead to a `ModuleNotFoundError: No module named 'cv2'` error.
+1. 添加素材轨，至少添加一个全景视频轨。
+2. 选择输出文件夹。
+3. 确认 Metashape 路径。
+4. 输入抽帧间隔，单位为秒/帧，推荐先用 `1.0`。
+5. 帧数限制可留空；测试时可填 `50`。
+6. 点击开始，等待 COLMAP 输出完成。
 
-Before running the script, please open your Terminal or Command Prompt (with Administrator privileges on Windows) and execute the corresponding command to install the required dependency into Metashape's dedicated environment:
+输出目录结构：
 
-* **Windows (Default Path):**
-  ```bash
-  "C:\Program Files\Agisoft\Metashape Pro\python\python.exe" -m pip install opencv-python
-  ```
-* **Windows (Custom or Portable Path Example):**
-  ```bash
-  "D:\3DGS\Metashape 2.3.1\App\Metashape\python\python.exe" -m pip install opencv-python
-  ```
-* **macOS:**
-  ```bash
-  /Applications/MetashapePro.app/Contents/MacOS/python/bin/python3 -m pip install opencv-python
-  ```
-* **Linux:**
-  ```bash
-  ./metashape-pro/python/bin/python -m pip install opencv-python
-  ```
+```text
+output/
+  work/
+    frames/
+    xpano_manifest.json
+    xpano.psx
+  images/
+    *.jpg
+  sparse/
+    0/
+      cameras.bin
+      images.bin
+      points3D.bin
+  xpano_alignment_summary.txt
+  xpano_run_summary.json
+```
 
-For standard perspective cameras (Frame), the script applies the optimized calibration parameters to perform radial and tangential undistortion, outputting clean perspective images.
+## CLI 使用
 
-For dual-fisheye cameras, the script uses the center of each Camera Station as an origin to render 5 virtual perspective views at $90^\circ$ orthogonal angles: **Front, Left, Right, Top, and Bottom**.
+单个全景视频：
 
-The script projects each pixel $(u, v)$ of the virtual perspective plane into a 3D ray direction vector $\vec{v}(X, Y, Z)$ in camera space. It then reads the optimized fisheye calibration parameters ($K_1, K_2, K_3, K_4, P_1, P_2, B_1, B_2$) to project $\vec{v}$ back onto the physical fisheye sensor coordinates, determining the exact source coordinates $(u_{\text{raw}}, v_{\text{raw}})$. The script utilizes OpenCV's `LANCZOS4` high-order interpolation to resample the pixels, preserving sharpness and eliminating aliasing.
+```powershell
+python scripts\run_xpano_tracks_job.py `
+  --output "D:\path\to\output" `
+  --pano "D:\path\to\camera.osv" `
+  --seconds-per-frame 1 `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
+```
 
-To prevent Out-Of-Memory (OOM) failures when processing large datasets, the script features a memory-bounded batching architecture: it loads only one raw camera frame into memory at a time, spins up a limited ThreadPoolExecutor (5 threads) to render and write the 5 virtual perspective views to disk, and then immediately destroys the source frame pointer before proceeding to the next station.
+限制前 50 帧做回归测试：
 
-Finally, the script packages the virtual perspective views, standard perspective images, and sparse point cloud into COLMAP binary files (`cameras.bin`, `images.bin`, `points3D.bin`). This format can be imported directly into any major 3DGS or NeRF engine. Because the rendered views cover the full sky dome, the resulting reconstruction avoids the stitching seams and polar warping artifacts associated with ERP workflows.
+```powershell
+python scripts\run_xpano_tracks_job.py `
+  --output "D:\path\to\output_50" `
+  --pano "D:\path\to\camera.osv" `
+  --seconds-per-frame 1 `
+  --max-frames 50 `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
+```
+
+混合普通照片轨：
+
+```powershell
+python scripts\run_xpano_tracks_job.py `
+  --output "D:\path\to\mixed_output" `
+  --pano "D:\path\to\camera.osv" `
+  --standard-track phone "D:\path\to\phone_photos" `
+  --seconds-per-frame 1 `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
+```
+
+混合航拍照片轨：
+
+```powershell
+python scripts\run_xpano_tracks_job.py `
+  --output "D:\path\to\drone_output" `
+  --pano "D:\path\to\camera.osv" `
+  --aerial-track mavic "D:\path\to\drone_photos" `
+  --seconds-per-frame 1 `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
+```
+
+## 已锁定的 Metashape 流程
+
+全景轨道必须遵守以下流程：
+
+1. 每个采样时刻生成一个文件夹，内部包含左右两张原始鱼眼图。
+2. 每个文件夹作为一个 Metashape CameraGroup。
+3. 匹配和对齐前，全景 CameraGroup 设为 `Station`。
+4. 全景 sensor 设为 `Metashape.Sensor.Type.Fisheye`。
+5. 像元尺寸设为 `0.0024`，焦距设为 `2.5`。
+6. 初始 `b1`、`b2`、`k4` 设为 `0`。
+7. 固定参数必须是大写的 `["B1", "B2", "K4"]`。
+8. `matchPhotos` 使用 `tiepoint_limit=0`，并关闭 `filter_stationary_points`。
+9. `alignCameras(adaptive_fitting=True)`。
+10. 对齐后把全景 CameraGroup 改回 `Folder`。
+11. `optimizeCameras(fit_b1=False, fit_b2=False, fit_k4=False)`。
+12. 保存 `.psx` 后再执行地面校正和 COLMAP/cubemap 导出。
+
+详细验收记录见 `docs/VERIFIED_WORKFLOW.md`。
+
+## 项目结构
+
+```text
+app.py                         GUI 和共享任务编排入口
+scripts/
+  xpano_extract.py             OSV/INSV 抽帧
+  xpano_tracks.py              多素材轨 manifest 构建与校验
+  metashape_pipeline.py        Metashape 自动化对齐流程
+  export_colmap.py             COLMAP/cubemap/Frame 图像导出
+  run_xpano_tracks_job.py      CLI 入口
+  verify_xpano_output.py       输出结构校验
+  diagnose_metashape_project.py Metashape 工程诊断
+docs/
+  VERIFIED_WORKFLOW.md         已验收的全景工作流
+  MULTI_TRACK_BACKEND.md       多轨道后端设计和测试记录
+tests/                         轻量单元测试
+```
+
+## 测试
+
+```powershell
+python -m py_compile app.py scripts\metashape_pipeline.py scripts\export_colmap.py scripts\xpano_tracks.py
+python -m unittest tests.test_xpano_tracks tests.test_verify_xpano_output tests.test_run_xpano_tracks_job tests.test_app_pipeline
+```
+
+如果本机安装了 Metashape，可以进一步使用：
+
+```powershell
+& "C:\Path\To\Metashape\metashape.exe" -r scripts\diagnose_metashape_project.py `
+  --project "D:\path\to\output\work\xpano.psx" `
+  --expect-fixed-fisheye
+```
+
+## 发布前注意
+
+- 不要提交本机输出目录、`.psx` 工程、抽帧图像、COLMAP 输出和错误日志。
+- 不要把 Metashape 本体打进仓库；用户需要自行安装并遵守 Agisoft 授权。
+- `download/` 是历史下载/迁移目录，不属于发布主体。
+- 混合轨道功能目前建议标为 experimental，直到有更多真实同场景数据验收。
+
+## License
+
+本项目保留原 xPano 的 MIT License。发布 fork 时请保留 `LICENSE`，并在 release note 中说明本 fork 追加了 GUI、多素材轨、Metashape CLI 自动化和 COLMAP 混合导出能力。
