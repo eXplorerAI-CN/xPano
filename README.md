@@ -220,4 +220,4 @@ python -m unittest tests.test_xpano_tracks tests.test_verify_xpano_output tests.
 
 ## License
 
-本项目保留原 xPano 的 MIT License。发布 fork 时请保留 `LICENSE`，并在 release note 中说明本 fork 追加了 GUI、多素材轨、Metashape CLI 自动化和 COLMAP 混合导出能力。
+本项目保留原 xPano 的 Apache 2.0 License。发布 fork 时请保留 `LICENSE`，并在 release note 中说明本 fork 追加了 GUI、多素材轨、Metashape CLI 自动化和 COLMAP 混合导出能力。
