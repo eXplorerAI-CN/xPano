@@ -7,7 +7,7 @@ xPano 是一套专为双镜头 360° 全景相机（如 Insta360、DJI Osmo 360 
 
 传统全景重建往往依赖于官方软件将双鱼眼拼接为等距圆柱投影（Equirectangular Projection, ERP）全景图，再以一定的偏转角切割成数张透视切片，这在计算机视觉与摄影测量学中会引入不可逆的非线性畸变与撕裂。xPano 颠覆了这一传统，它提倡直接利用原始的双鱼眼文件进行空三解算，通过科学的相机站约束和物理参数标定锁定几何真实性，并在解算完成后利用逆向投影重映射算法，将鱼眼无缝切片为高质量的虚拟立方体贴图（Virtual Cubemap），从而完美适配 3D Gaussian Splatting (3DGS) 以及 NeRF 等下游三维重建管线。
 
-[GUI 版本操作文档](README.md)
+💡 **提示**：本文档适用于已安装 Metashape 且习惯使用原生脚本工作流的用户（需根据指引手动配置环境与依赖）。如果希望避开繁琐的软件环境配置、体验免安装且一键式开箱即用的极简操作，请参阅 [GUI 版本操作文档](README.md) 。
 
 ![Workflow Overview](images/workflow_overview.png)
 
@@ -96,11 +96,30 @@ scripts/align_ground_plane.py
 
 ### 第五步：虚拟 Cubemap 渲染与 COLMAP 完美导出
 
-这是 xPano 工作流最核心的数据转换引擎。通过运行 `export_colmap.py` 脚本，将对齐标定好的高质量鱼眼数据集导出为无畸变、无接缝的透视相机 COLMAP 格式。
+这是 xPano 工作流最核心的数据转换引擎。通过运行 `metashape_export_colmap.py` 脚本，将对齐标定好的高质量鱼眼数据集导出为无畸变、无接缝的透视相机 COLMAP 格式。
 
 ```bash
 # 在 Metashape 中通过 Run Script 执行该文件
-scripts/export_colmap.py
+scripts/metashape_export_colmap.py
+```
+#### 运行前准备（内置 Python 依赖安装）
+
+由于 Metashape 运行在软件内置的独立 Python 嵌入式环境中，而非系统的全局 Python 环境。直接在普通的系统终端运行 `pip install opencv-python` 会导致脚本运行时抛出 `ModuleNotFoundError: No module named 'cv2'` 错误。
+
+在运行脚本前，请使用管理员权限打开命令提示符（cmd）或终端，运行以下对应命令将依赖库安装至 Metashape 专属环境中：
+
+* **Windows (如非默认安装路径，请自行分局实际情况修改):**
+  ```bash
+  "C:\Program Files\Agisoft\Metashape Pro\python\python.exe" -m pip install opencv-python
+  ```
+* **macOS:**
+  ```bash
+  /Applications/MetashapePro.app/Contents/MacOS/python/bin/python3 -m pip install opencv-python
+  ```
+* **Linux:**
+  ```bash
+  ./metashape-pro/python/bin/python -m pip install opencv-python
+  ```
 ```
 
 对于传统的透视相机（Frame），脚本会自动应用计算好的标定内参对其进行高质量的径向与切向畸变剔除，输出纯净的无畸变图像。
