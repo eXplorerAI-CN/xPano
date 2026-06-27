@@ -7,7 +7,7 @@ xPano 是一套专为双镜头 360° 全景相机（如 Insta360、DJI Osmo 360 
 
 传统全景重建往往依赖于官方软件将双鱼眼拼接为等距圆柱投影（Equirectangular Projection, ERP）全景图，再以一定的偏转角切割成数张透视切片，这在计算机视觉与摄影测量学中会引入不可逆的非线性畸变与撕裂。xPano 颠覆了这一传统，它提倡直接利用原始的双鱼眼文件进行空三解算，通过科学的相机站约束和物理参数标定锁定几何真实性，并在解算完成后利用逆向投影重映射算法，将鱼眼无缝切片为高质量的虚拟立方体贴图（Virtual Cubemap），从而完美适配 3D Gaussian Splatting (3DGS) 以及 NeRF 等下游三维重建管线。
 
-[English Documentation](README.md)
+[GUI 版本操作文档](README.md)
 
 ![Workflow Overview](images/workflow_overview.png)
 
