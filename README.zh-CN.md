@@ -34,7 +34,7 @@ xPano 则通过逆转这一管线彻底解决了上述痛点，在对齐阶段�
 使用项目提供的 `pano_extractor.py` 脚本，自动扫描当前目录下的 `.insv` 或 `.osv` 全景原始视频流进行同步抽帧。
 
 ```bash
-python scripts/pano_extractor.py
+stand-alone/pano_extractor.py
 ```
 
 脚本在提取图像的同时，会自动为每一帧创建一个专属的子文件夹，将对应的左右两张鱼眼照片归档于此。这种收纳方式在摄影测量中被称为“相机站（Camera Station）”。双镜头全景相机的相对位姿在物理上是基本固定的，将同一时刻的左右鱼眼收纳在同一个相机站下，能帮助在后续步骤中利用极强的物理先验来引导稀疏对齐。
@@ -85,7 +85,7 @@ python scripts/pano_extractor.py
 
 ```bash
 # 在 Metashape 脚本控制台或菜单中载入执行
-scripts/align_ground_plane.py
+stand-alone/align_ground_plane.py
 ```
 
 该脚本首先会自适应扫描全局的稀疏特征点云，通过 RANSAC（随机抽样一致）算法，在海量点云中搜寻并计算出最契合的物理地面平面法线。如果用户在界面中手动选择了一部分点作为参考，脚本会优先使用这些选中点进行拟合，实现极佳的人工辅助对齐。
@@ -100,7 +100,7 @@ scripts/align_ground_plane.py
 
 ```bash
 # 在 Metashape 中通过 Run Script 执行该文件
-scripts/metashape_export_colmap.py
+stand-alone/export_colmap.py
 ```
 #### 运行前准备（内置 Python 依赖安装）
 
