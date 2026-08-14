@@ -29,7 +29,12 @@ def main():
     print("sensors:", flush=True)
     for sensor in chunk.sensors:
         users = sum(1 for camera in chunk.cameras if camera.sensor == sensor)
-        print(f"  label={sensor.label} type={sensor.type} users={users} fixed={list(sensor.fixed_params)}", flush=True)
+        calib = sensor.calibration
+        print(
+            f"  label={sensor.label} type={sensor.type} calibration_type={getattr(calib, 'type', None)} "
+            f"size={sensor.width}x{sensor.height} f={getattr(calib, 'f', None)} users={users} fixed={list(sensor.fixed_params)}",
+            flush=True,
+        )
     print("groups:", flush=True)
     for group in chunk.camera_groups:
         count = sum(1 for camera in chunk.cameras if camera.group == group)

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpano.local/schemas/xpano_execution_plan_v1.schema.json",
+  "title": "xPano Execution Plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "planId", "projectId", "inputRevision", "backend", "createdAt", "nodes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "projectId": { "type": "string", "minLength": 1 },
+    "inputRevision": { "type": "integer", "minimum": 0 },
+    "backend": { "enum": ["metashape", "colmap"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stageId", "label", "dependsOn", "weight", "progressMode", "slowHint", "skipReason"],
+        "properties": {
+          "stageId": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 },
+          "dependsOn": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "weight": { "type": "number", "minimum": 0 },
+          "progressMode": { "enum": ["counted", "indeterminate", "external_percent"] },
+          "slowHint": { "type": "boolean" },
+          "skipReason": { "type": ["string", "null"] },
+          "estimatedSeconds": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ This document describes the current multi-track backend used by the GUI and CLI.
 
 ## Track Types
 
-- `panorama_video`: `.osv`, `.insv`, or compatible dual-fisheye video. Uses the verified Station -> Folder xPano workflow.
+- `panorama_video`: `.osv`, `.insv`, or compatible dual-fisheye video. Uses the verified Station-retained xPano workflow.
 - `standard_photos`: pinhole/frame photos from a phone or standard camera.
 - `aerial_photos`: pinhole/frame photos from a drone.
 
@@ -37,13 +37,13 @@ Panorama track:
 - Creates two sensors:
   - `<track_id>_left`
   - `<track_id>_right`
-- Sensor type is `Metashape.Sensor.Type.Fisheye`.
+- Sensor type is `Metashape.Sensor.Type.EquidistantFisheye` when supported, matching the initial release. Older Metashape builds fall back to `Fisheye`.
+- The imported source calibration is copied before the equidistant model and fixed parameters are applied.
 - Pixel size is `0.0024`.
 - Focal length is `2.5`.
 - Fixed params are exactly `["B1", "B2", "K4"]`.
 - Each sampled frame creates one CameraGroup with two cameras.
-- These groups are switched to `Station` before matching/alignment.
-- These groups are switched back to `Folder` before optimization/export.
+- These groups are switched to `Station` before panorama matching/alignment, then restored to `Folder` before panorama optimization.
 
 Photo/aerial track:
 
@@ -53,6 +53,9 @@ Photo/aerial track:
 - It is never assigned to Station groups.
 
 Unused auto-created Metashape sensors are pruned after import so the project does not contain misleading empty sensors.
+New cameras are identified by stable Metashape camera keys rather than `chunk.cameras` list position. Every import also verifies camera count and source-photo paths before sensor assignment.
+
+Metashape uses the initial-release staged workflow: it imports, Station-matches, aligns, releases, and optimizes panorama cameras first with `keep_keypoints=True`. Only then are Frame cameras imported. A second visual match retains the panorama keypoints, and `alignCameras(reset_alignment=False)` incrementally attaches the new cameras before final optimization. Stored `mixed` configuration values remain accepted for project compatibility but are normalized to this one stable workflow.
 
 ## Export Rules
 
@@ -76,9 +79,9 @@ Rules:
 
 ## CLI Examples
 
-The current `app.py` GUI builds a manifest internally and calls Metashape with `--manifest`. Internally, the legacy `run_metashape_pipeline(JobConfig)` wrapper also routes into `run_multi_track_pipeline(MultiTrackJobConfig)`, so single-video GUI runs, multi-track GUI runs, and CLI runs share the same backend path. `scripts/run_xpano_tracks_job.py` is a thin CLI wrapper around this app-level runner.
+The Tauri UI launches `scripts/run_xpano_tracks_job.py`, which builds a manifest and routes into `scripts.pipeline_core.run_multi_track_pipeline(MultiTrackJobConfig)`. CLI runs and GUI runs therefore share the same backend path without depending on a legacy Python GUI module.
 
-The app-level input model is:
+The backend input model is:
 
 ```text
 MaterialTrack(track_type, label, paths)
@@ -87,29 +90,20 @@ MaterialTrack(track_type, label, paths)
 where `track_type` is one of:
 
 - `panorama_video`
+- `ordinary_video`
 - `standard_photos`
 - `aerial_photos`
 
-`material_tracks_to_job_config(...)` converts a material-track list into `MultiTrackJobConfig`. The GUI material pool maintains this list directly, then calls the shared runner.
-
-The Tkinter GUI keeps a `self.material_tracks` list and exposes a material-track table with:
-
-- `+ 全景视频`
-- `+ 普通照片`
-- `+ 航拍照片`
-- `删除选中`
-
-This is the production bridge to the multi-track backend. Visual polish can continue independently from the Metashape workflow logic.
-
+`material_tracks_to_job_config(...)` converts a material-track list into `MultiTrackJobConfig`. The Tauri UI serializes material tracks to CLI arguments, while the Python backend remains UI-neutral.
 Single panorama track:
 
 ```powershell
 python scripts\run_xpano_tracks_job.py `
   --output "_tracks_qinshi_1s_50" `
-  --pano "F:\3Dregistration\360TEST\qinshi\CAM_20260615223741_0132_D.OSV" `
-  --seconds-per-frame 1 `
+  --pano "D:\path\to\camera.osv" `
+  --frames-per-second 1 `
   --max-frames 50 `
-  --metashape "E:\FastProgram\Metashape\metashape.exe"
+  --metashape "C:\Path\To\Metashape\metashape.exe"
 ```
 
 Mixed panorama + phone photos:
@@ -117,11 +111,11 @@ Mixed panorama + phone photos:
 ```powershell
 python scripts\run_xpano_tracks_job.py `
   --output "_tracks_mixed" `
-  --pano "F:\path\camera.osv" `
-  --standard-track phone "F:\path\phone_photos" `
-  --seconds-per-frame 1 `
+  --pano "D:\path\camera.osv" `
+  --standard-track phone "D:\path\phone_photos" `
+  --frames-per-second 1 `
   --max-frames 50 `
-  --metashape "E:\FastProgram\Metashape\metashape.exe"
+  --metashape "C:\Path\To\Metashape\metashape.exe"
 ```
 
 Mixed panorama + drone photos:
@@ -129,10 +123,10 @@ Mixed panorama + drone photos:
 ```powershell
 python scripts\run_xpano_tracks_job.py `
   --output "_tracks_drone" `
-  --pano "F:\path\camera.osv" `
-  --aerial-track mavic "F:\path\drone_photos" `
-  --seconds-per-frame 1 `
-  --metashape "E:\FastProgram\Metashape\metashape.exe"
+  --pano "D:\path\camera.osv" `
+  --aerial-track mavic "D:\path\drone_photos" `
+  --frames-per-second 1 `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
 ```
 
 Prepared manifest:
@@ -140,8 +134,8 @@ Prepared manifest:
 ```powershell
 python scripts\run_xpano_tracks_job.py `
   --output "_tracks_from_manifest" `
-  --manifest "F:\path\xpano_manifest.json" `
-  --metashape "E:\FastProgram\Metashape\metashape.exe"
+  --manifest "D:\path\xpano_manifest.json" `
+  --metashape "C:\Path\To\Metashape\metashape.exe"
 ```
 
 Validate a prepared manifest before starting Metashape:
@@ -154,7 +148,7 @@ python scripts\validate_xpano_manifest.py `
 Verify a finished Metashape project:
 
 ```powershell
-& "E:\FastProgram\Metashape\metashape.exe" -r scripts\diagnose_metashape_project.py `
+& "C:\Path\To\Metashape\metashape.exe" -r scripts\diagnose_metashape_project.py `
   --project "_tracks_qinshi_1s_50\work\xpano.psx" `
   --expect-cameras 100 `
   --expect-aligned 100 `
@@ -182,9 +176,9 @@ python scripts\verify_xpano_output.py `
 Continue from a manually edited Metashape project:
 
 ```powershell
-& "E:\FastProgram\Metashape\metashape.exe" -r scripts\reexport_colmap_from_project.py `
-  --project "F:\path\xpano.psx" `
-  --export-dir "F:\path\colmap_output"
+& "C:\Path\To\Metashape\metashape.exe" -r scripts\reexport_colmap_from_project.py `
+  --project "D:\path\xpano.psx" `
+  --export-dir "D:\path\colmap_output"
 ```
 
 ## Verified Smoke Runs

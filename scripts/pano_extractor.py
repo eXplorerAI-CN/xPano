@@ -5,10 +5,17 @@ import shutil
 import subprocess
 import json
 import piexif
+import sys
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 import threading
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from scripts.runtime_paths import locate_ffmpeg, locate_ffprobe
 
 # --- 配置区 ---
 SUPPORTED_EXTENSIONS = ['.insv', '.osv', '.mp4']
@@ -17,7 +24,7 @@ GPU_ACCEL = False
 
 def get_video_info(file_path):
     try:
-        cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", str(file_path)]
+        cmd = [locate_ffprobe(), "-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", str(file_path)]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         data = json.loads(result.stdout)
         duration = float(data['format']['duration'])
@@ -65,7 +72,7 @@ def process_single_task(task, fps, base_dir, position):
     dur, streams = get_video_info(task['left_file'])
     total_expected = int(dur * fps)
 
-    cmd = ["ffmpeg", "-hide_banner", "-progress", "pipe:2", "-i", str(task['left_file'])]
+    cmd = [locate_ffmpeg(), "-hide_banner", "-progress", "pipe:2", "-i", str(task['left_file'])]
     if GPU_ACCEL: cmd.insert(2, "-hwaccel"); cmd.insert(3, "cuda")
 
     if task['type'] == 'insta_split':

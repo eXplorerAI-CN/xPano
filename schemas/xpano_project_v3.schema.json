@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpano.local/schemas/xpano_project_v3.schema.json",
+  "title": "xPano Project v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "name",
+    "createdAt",
+    "updatedAt",
+    "activeWorkspace",
+    "revision",
+    "revisions",
+    "tracks",
+    "reconstruction",
+    "training",
+    "geometry",
+    "jobs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 3 },
+    "projectId": { "$ref": "#/$defs/nonEmptyString" },
+    "name": { "$ref": "#/$defs/nonEmptyString" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "activeWorkspace": { "enum": ["media", "reconstruction", "results", "training"] },
+    "revision": { "type": "integer", "minimum": 0 },
+    "revisions": { "$ref": "#/$defs/revisions" },
+    "tracks": { "type": "array", "items": { "$ref": "#/$defs/track" } },
+    "reconstruction": { "$ref": "#/$defs/reconstruction" },
+    "training": { "$ref": "#/$defs/training" },
+    "geometry": { "$ref": "#/$defs/geometry" },
+    "jobs": { "type": "array", "items": { "$ref": "#/$defs/jobSnapshot" } }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:[\\\\/])(?![\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$"
+    },
+    "revisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media", "alignmentInput", "alignment", "geometry"],
+      "properties": {
+        "media": { "type": "integer", "minimum": 0 },
+        "alignmentInput": { "type": "integer", "minimum": 0 },
+        "alignment": { "type": "integer", "minimum": 0 },
+        "geometry": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "sourceFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "mtimeNs"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 0 },
+        "mtimeNs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "trim": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["framesPerSecond", "frameLimit"],
+      "properties": {
+        "framesPerSecond": { "type": "number", "exclusiveMinimum": 0 },
+        "frameLimit": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "mediaItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "selected"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "timestamp": { "type": ["number", "null"], "minimum": 0 },
+        "selected": { "type": "boolean" },
+        "left": { "$ref": "#/$defs/relativePath" },
+        "right": { "$ref": "#/$defs/relativePath" },
+        "thumbnailLeft": { "$ref": "#/$defs/relativePath" },
+        "thumbnailRight": { "$ref": "#/$defs/relativePath" },
+        "image": { "$ref": "#/$defs/relativePath" },
+        "thumbnail": { "$ref": "#/$defs/relativePath" }
+      },
+      "oneOf": [
+        { "required": ["left", "right", "thumbnailLeft", "thumbnailRight"] },
+        { "required": ["image", "thumbnail"] }
+      ]
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "label",
+        "sourcePath",
+        "sourceFingerprint",
+        "cameraProfile",
+        "trim",
+        "extraction",
+        "status",
+        "items"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "type": { "enum": ["panoramic_video", "ordinary_video", "standard_photos", "aerial_photos"] },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "sourcePath": { "$ref": "#/$defs/nonEmptyString" },
+        "sourceFingerprint": { "$ref": "#/$defs/sourceFingerprint" },
+        "cameraProfile": { "type": ["string", "null"], "enum": ["standard", "wide", null] },
+        "trim": { "$ref": "#/$defs/trim" },
+        "extraction": { "$ref": "#/$defs/extraction" },
+        "status": { "enum": ["draft", "prepared", "running", "ready", "stale", "missing", "failed", "interrupted"] },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/mediaItem" } }
+      }
+    },
+    "reconstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "inputRevision", "backend", "config", "projectPath", "colmapPath"],
+      "properties": {
+        "status": { "enum": ["idle", "ready", "running", "complete", "stale", "failed", "interrupted", "repair"] },
+        "inputRevision": { "type": "integer", "minimum": 0 },
+        "backend": { "enum": ["metashape", "colmap"] },
+        "config": { "type": "object" },
+        "projectPath": { "anyOf": [{ "$ref": "#/$defs/relativePath" }, { "type": "null" }] },
+        "colmapPath": { "anyOf": [{ "$ref": "#/$defs/relativePath" }, { "type": "null" }] }
+      }
+    },
+    "training": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "inputRevision", "config", "outputPath", "artifactPath", "sourceJobId", "lastIteration", "totalIterations", "lastLoss", "splatCount", "error"],
+      "properties": {
+        "status": { "enum": ["idle", "ready", "running", "complete", "stale", "failed", "interrupted"] },
+        "inputRevision": { "type": "integer", "minimum": 0 },
+        "config": { "type": "object" },
+        "outputPath": { "anyOf": [{ "$ref": "#/$defs/relativePath" }, { "type": "null" }] },
+        "artifactPath": { "anyOf": [{ "$ref": "#/$defs/relativePath" }, { "type": "null" }] },
+        "sourceJobId": { "type": ["string", "null"] },
+        "lastIteration": { "type": "integer", "minimum": 0 },
+        "totalIterations": { "type": "integer", "minimum": 0 },
+        "lastLoss": { "type": ["number", "null"] },
+        "splatCount": { "type": "integer", "minimum": 0 },
+        "error": { "type": ["string", "null"] }
+      }
+    },
+    "worldTransform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worldFromCanonical", "revision"],
+      "properties": {
+        "worldFromCanonical": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 16,
+          "maxItems": 16
+        },
+        "revision": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "pointVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "kind", "canonicalPath", "pointCount", "createdAt", "sourceJobId", "protected"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "kind": { "enum": ["standard", "densified", "imported"] },
+        "canonicalPath": { "$ref": "#/$defs/relativePath" },
+        "pointCount": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "sourceJobId": { "type": ["string", "null"] },
+        "protected": { "type": "boolean" },
+        "checksumSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "transformRevision": { "type": "integer", "minimum": 0 },
+        "status": { "enum": ["ready", "missing", "corrupt", "stale"] }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transform", "activeVariantId", "variants"],
+      "properties": {
+        "transform": { "$ref": "#/$defs/worldTransform" },
+        "activeVariantId": { "$ref": "#/$defs/nonEmptyString" },
+        "variants": { "type": "array", "items": { "$ref": "#/$defs/pointVariant" }, "minItems": 1 }
+      }
+    },
+    "jobSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "workspace", "state", "stageId", "sequence", "startedAt", "updatedAt"],
+      "properties": {
+        "jobId": { "$ref": "#/$defs/nonEmptyString" },
+        "workspace": { "enum": ["media", "reconstruction", "results", "training"] },
+        "state": { "enum": ["queued", "running", "cancelling", "completed", "failed", "cancelled", "interrupted"] },
+        "stageId": { "type": ["string", "null"] },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

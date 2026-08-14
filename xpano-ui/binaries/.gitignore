@@ -1,0 +1,6 @@
+# Ignore downloaded binaries, track only directory structure
+*
+!.gitignore
+!.gitkeep
+!ffmpeg/
+!python/

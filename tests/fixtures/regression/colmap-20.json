@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "caseId": "colmap-20",
+  "capturedAt": "2026-07-10T05:50:11.808138Z",
+  "backend": "colmap",
+  "frameCount": 20,
+  "model": {
+    "relativePath": "sparse/0",
+    "cameraCount": 10,
+    "imageCount": 200,
+    "pointCount": 2571
+  },
+  "artifacts": {
+    "xpano_manifest.json": "cec02ce393bfb036d2c401b95a45c894b93c1ea3e47cc35873dc35ca04fa55d1",
+    "cameras.bin": "0844bea0a424297c0769fcad73f61c7bbec76390c2c660436a56ac72a47ee8b8",
+    "images.bin": "4edf4f7b0669b853e7ba90201611df76da25bd5364a759a6d74dcafea685c9d7",
+    "points3D.bin": "148fb0d3f7dac2867f19eb0c6123ab9282a104479ccabf57a0d579c5ef72372a"
+  }
+}

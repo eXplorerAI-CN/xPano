@@ -5,7 +5,8 @@ import math
 # ================= 配置区 =================
 # 如果为 True: 导出适配 Postshot/SuperSplat 的 Y-Up 坐标系
 # 如果为 False: 保持 Metashape 默认的 Z-Up 坐标系
-EXPORT_FOR_3DGS = True 
+EXPORT_FOR_3DGS = True
+TARGET_UP_AXIS = "+Y"
 
 # RANSAC 严苛阈值系数 (0.001 代表场景对角线的千分之一)
 STRICT_THRESHOLD_COEFF = 0.001
@@ -24,6 +25,41 @@ def cross(v1, v2):
 def normalize(v):
     n = math.sqrt(dot(v, v))
     return v / n if n > 0 else v
+
+
+def normalize_up_axis(value):
+    raw = str(value or TARGET_UP_AXIS).strip().upper().replace(" ", "")
+    aliases = {
+        "X": "+X",
+        "Y": "+Y",
+        "Z": "+Z",
+        "X-UP": "+X",
+        "Y-UP": "+Y",
+        "Z-UP": "+Z",
+        "+X-UP": "+X",
+        "+Y-UP": "+Y",
+        "+Z-UP": "+Z",
+    }
+    axis = aliases.get(raw, raw)
+    if axis not in {"+X", "-X", "+Y", "-Y", "+Z", "-Z"}:
+        raise ValueError(f"Unsupported up axis: {value}")
+    return axis
+
+
+def _signed(axis, vector):
+    return vector if axis.startswith("+") else -vector
+
+
+def target_basis_for_up_axis(up_axis, x_orig, y_orig, ground_n):
+    axis = normalize_up_axis(up_axis)
+    if axis.endswith("Y"):
+        y_final = _signed(axis, ground_n)
+        return x_orig, y_final, normalize(cross(x_orig, y_final))
+    if axis.endswith("Z"):
+        z_final = _signed(axis, ground_n)
+        return x_orig, normalize(cross(z_final, x_orig)), z_final
+    x_final = _signed(axis, ground_n)
+    return x_final, y_orig, normalize(cross(x_final, y_orig))
 
 def get_ransac_plane(points, iterations=5000, threshold=0.001, must_be_perpendicular_to=None):
     best_inliers_count = 0
@@ -50,7 +86,7 @@ def get_ransac_plane(points, iterations=5000, threshold=0.001, must_be_perpendic
             
     return best_normal, best_p
 
-def main():
+def main(up_axis=None):
     doc = Metashape.app.document
     chunk = doc.chunk
     if not chunk or not chunk.tie_points:
@@ -105,15 +141,9 @@ def main():
     x_orig = normalize(cross(y_orig, ground_n))
 
     # 5. 定义目标坐标系轴向 (关键变换点)
-    if EXPORT_FOR_3DGS:
-        # 目标: Y轴向上 (WebGL/Postshot)
-        # New_X = x_orig, New_Y = ground_n, New_Z = -y_orig
-        X_final, Y_final, Z_final = x_orig, -ground_n, y_orig
-        print("已应用: Y-Up (3DGS/SuperSplat) 轴向转换")
-    else:
-        # 目标: Z轴向上 (Metashape默认)
-        X_final, Y_final, Z_final = x_orig, y_orig, ground_n
-        print("已应用: Z-Up (Metashape标准) 轴向保持")
+    target_axis = normalize_up_axis(up_axis or ("+Y" if EXPORT_FOR_3DGS else "+Z"))
+    X_final, Y_final, Z_final = target_basis_for_up_axis(target_axis, x_orig, y_orig, ground_n)
+    print(f"Applied up-axis correction: {target_axis}")
 
     # 6. 计算 5%-95% 的核心中心
     proj_X = sorted([dot(p, X_final) for p in all_points])

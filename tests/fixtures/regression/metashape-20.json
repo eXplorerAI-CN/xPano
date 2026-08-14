@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "caseId": "metashape-20",
+  "capturedAt": "2026-07-10T05:45:40.320461Z",
+  "backend": "metashape",
+  "frameCount": 20,
+  "model": {
+    "relativePath": "sparse/0",
+    "cameraCount": 10,
+    "imageCount": 200,
+    "pointCount": 14028
+  },
+  "artifacts": {
+    "xpano_manifest.json": "ba4ada31a5e3e00f4fe65756fecce8bbc484f34b5f986363ee38ccdf24925519",
+    "cameras.bin": "a70bb21028ce5c1d1ffc239762c6be44e817b7ef79fff5823ca6612bfcec7934",
+    "images.bin": "bdbfe8f7ea2224d99e80b30901ee0f52dd2c1a9bf20f516c62599496473ea816",
+    "points3D.bin": "f45df3349bf42c5bc976c6c22b3a71df780a9c9b86f884c0d331d7940eca3f6e"
+  }
+}

@@ -7,24 +7,40 @@ __pycache__/
 
 # Local virtual environments
 .venv/
+.venv-densify/
+.venv-release/
 venv/
 env/
 
 # Local agent memory
 .learnings/
+.codex_tmp/
+.tmp_minidump_venv/
 
 # xPano generated outputs
+build/
+dist/
+/output/
+xpano-ui/node_modules/
+xpano-ui/dist/
+xpano-ui/src-tauri/target/
+xpano-ui/src-tauri/target-codex-test/
+xpano-ui/output/
+.playwright-cli/
 work/
 frames/
 sparse/
+_run*/
 *_output/
 *_outputs/
 _acceptance*/
+_compare*/
 _tracks*/
 _tmp*/
 xpano_alignment_summary.txt
 xpano_run_summary.json
 xpano_gui_error.log
+*.log
 *.psx
 *.psx.files/
 *.psz
@@ -34,6 +50,20 @@ xpano_gui_error.log
 
 # Historical local copy, not part of the release root
 download/
+
+# Optional bundled third-party binaries. Keep small docs/scripts tracked.
+!tools/
+!tools/colmap/
+tools/colmap/*
+!tools/colmap/README.md
+!tools/offline-wheels/
+!tools/offline-wheels/**
+tools/lichtfeld-densification-plugin/
+tools/torch-cache/
+tools/offline-densify-artifacts/
+tools/lfs-densify-runtime/
+tools/metashape-python/
+tools/webview2/
 
 # Large raw media and reconstruction artifacts
 *.osv

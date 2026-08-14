@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 3,
+  "projectId": "project-example-001",
+  "name": "Lobby capture",
+  "createdAt": "2026-07-10T05:00:00Z",
+  "updatedAt": "2026-07-10T05:10:00Z",
+  "activeWorkspace": "media",
+  "revision": 4,
+  "revisions": {
+    "media": 3,
+    "alignmentInput": 2,
+    "alignment": 1,
+    "geometry": 0
+  },
+  "tracks": [
+    {
+      "id": "track-pano-001",
+      "type": "panoramic_video",
+      "label": "Lobby panorama",
+      "sourcePath": "D:/captures/CAM_001.OSV",
+      "sourceFingerprint": {
+        "size": 125829120,
+        "mtimeNs": 1783650000000000000
+      },
+      "cameraProfile": null,
+      "trim": {
+        "start": 0,
+        "end": 20
+      },
+      "extraction": {
+        "framesPerSecond": 1,
+        "frameLimit": 20
+      },
+      "status": "ready",
+      "items": [
+        {
+          "id": "frame_00001",
+          "timestamp": 0,
+          "selected": true,
+          "left": "work/frames/track-pano-001/frame_00001/left.jpg",
+          "right": "work/frames/track-pano-001/frame_00001/right.jpg",
+          "thumbnailLeft": "work/thumbnails/track-pano-001/frame_00001/left.jpg",
+          "thumbnailRight": "work/thumbnails/track-pano-001/frame_00001/right.jpg"
+        }
+      ]
+    }
+  ],
+  "reconstruction": {
+    "status": "complete",
+    "inputRevision": 2,
+    "backend": "metashape",
+    "config": {
+      "alignmentMode": "backbone"
+    },
+    "projectPath": "work/metashape/xpano.psx",
+    "colmapPath": "colmap"
+  },
+  "training": {
+    "status": "idle",
+    "inputRevision": 0,
+    "config": {},
+    "outputPath": null,
+    "artifactPath": null,
+    "sourceJobId": null,
+    "lastIteration": 0,
+    "totalIterations": 0,
+    "lastLoss": null,
+    "splatCount": 0,
+    "error": null
+  },
+  "geometry": {
+    "transform": {
+      "worldFromCanonical": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      "revision": 0
+    },
+    "activeVariantId": "standard",
+    "variants": [
+      {
+        "id": "standard",
+        "label": "Standard",
+        "kind": "standard",
+        "canonicalPath": "work/geometry/variants/standard/points3D.bin",
+        "pointCount": 125000,
+        "createdAt": "2026-07-10T05:10:00Z",
+        "sourceJobId": "job-reconstruction-001",
+        "protected": true,
+        "checksumSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "transformRevision": 0,
+        "status": "stale"
+      }
+    ]
+  },
+  "jobs": []
+}

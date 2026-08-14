@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "runtimeVersion": "metashape-deps-2026.07.1",
+  "platform": "windows-x86_64",
+  "metashape": {
+    "profiles": {
+      "cp39": ["numpy-cp39", "opencv-abi3"],
+      "cp310": ["numpy-cp310", "opencv-abi3"],
+      "cp311": ["numpy-cp311", "opencv-abi3"],
+      "cp312": ["numpy-cp312", "opencv-abi3"]
+    },
+    "artifacts": [
+      {
+        "id": "numpy-cp39",
+        "filename": "numpy-1.26.4-cp39-cp39-win_amd64.whl",
+        "path": "tools/offline-wheels/metashape/numpy-1.26.4-cp39-cp39-win_amd64.whl",
+        "size": 15814633,
+        "sha256": "3373d5d70a5fe74a2c1bb6d2cfd9609ecf686d47a2d7b1d37a8f3b6bf6003aea",
+        "license": "BSD-3-Clause"
+      },
+      {
+        "id": "numpy-cp310",
+        "filename": "numpy-1.26.4-cp310-cp310-win_amd64.whl",
+        "path": "tools/offline-wheels/app/numpy-1.26.4-cp310-cp310-win_amd64.whl",
+        "size": 15808905,
+        "sha256": "b97fe8060236edf3662adfc2c633f56a08ae30560c56310562cb4f95500022d5",
+        "license": "BSD-3-Clause"
+      },
+      {
+        "id": "numpy-cp311",
+        "filename": "numpy-1.26.4-cp311-cp311-win_amd64.whl",
+        "path": "tools/offline-wheels/app/numpy-1.26.4-cp311-cp311-win_amd64.whl",
+        "size": 15811913,
+        "sha256": "cd25bcecc4974d09257ffcd1f098ee778f7834c3ad767fe5db785be9a4aa9cb2",
+        "license": "BSD-3-Clause"
+      },
+      {
+        "id": "numpy-cp312",
+        "filename": "numpy-1.26.4-cp312-cp312-win_amd64.whl",
+        "path": "tools/offline-wheels/metashape/numpy-1.26.4-cp312-cp312-win_amd64.whl",
+        "size": 15517754,
+        "sha256": "08beddf13648eb95f8d867350f6a018a4be2e5ad54c8d8caed89ebca558b2818",
+        "license": "BSD-3-Clause"
+      },
+      {
+        "id": "opencv-abi3",
+        "filename": "opencv_python_headless-4.10.0.84-cp37-abi3-win_amd64.whl",
+        "path": "tools/offline-wheels/metashape/opencv_python_headless-4.10.0.84-cp37-abi3-win_amd64.whl",
+        "size": 38754031,
+        "sha256": "afcf28bd1209dd58810d33defb622b325d3cbe49dcd7a43a902982c33e5fad05",
+        "license": "Apache-2.0"
+      }
+    ]
+  }
+}

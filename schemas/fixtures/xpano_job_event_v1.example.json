@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sequence": 42,
+  "timestamp": "2026-07-10T05:02:18Z",
+  "projectId": "project-example-001",
+  "jobId": "job-media-001",
+  "workspace": "media",
+  "kind": "stage.progress",
+  "stageId": "extract.decode",
+  "trackId": "track-pano-001",
+  "state": "running",
+  "current": 18,
+  "total": 20,
+  "unit": "frame",
+  "percent": 90,
+  "etaSeconds": 3,
+  "message": "Extracting frame 18/20",
+  "payload": {
+    "itemId": "frame_00018"
+  }
+}
