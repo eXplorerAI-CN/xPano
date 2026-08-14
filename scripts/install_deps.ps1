@@ -11,7 +11,6 @@ function Find-Metashape {
     }
 
     $candidates = @(
-        "E:\FastProgram\Metashape\metashape.exe",
         "C:\Program Files\Agisoft\Metashape Pro\metashape.exe",
         "C:\Program Files\Agisoft\Metashape\metashape.exe"
     )

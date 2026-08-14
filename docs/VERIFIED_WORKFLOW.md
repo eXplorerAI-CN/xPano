@@ -4,11 +4,11 @@ This document locks the Metashape workflow that has been visually accepted as co
 
 ## Accepted Test Case
 
-- Input: `F:\3Dregistration\360TEST\qinshi\CAM_20260615223741_0132_D.OSV`
+- Input: a local `.osv` dual-fisheye test clip.
 - Sampling: `1.0` second/frame
 - Regression frame limit: `50`
-- Metashape executable used during validation: `E:\FastProgram\Metashape\metashape.exe`
-- Accepted output folder: `D:\CodeFiles\360gaussain\_acceptance_qinshi_1s_50`
+- Metashape executable used during validation: a local Metashape Pro install.
+- Accepted output folder: `_acceptance_qinshi_1s_50`
 
 Acceptance evidence:
 
@@ -25,13 +25,13 @@ Acceptance evidence:
 
 ## Locked Metashape Steps
 
-The automated pipeline must match the README/screenshot workflow:
+The panorama backbone stage must match the README/screenshot workflow:
 
 1. Extract each sampled video time into a folder containing the left and right fisheye JPEGs.
 2. Import each frame folder as one Metashape camera group.
 3. Set every group type to `Station` before matching and alignment.
-4. Set every sensor to `Metashape.Sensor.Type.Fisheye`.
-   In the Metashape UI this corresponds to the equidistant fisheye camera type used by the screenshots.
+4. Set every sensor to `Metashape.Sensor.Type.EquidistantFisheye` when supported, with `Fisheye` only as an older-version fallback.
+   Copy the calibration imported from the source image before applying the projection type and fixed parameters.
 5. Set sensor pixel size to `0.0024` mm and focal length to `2.5` mm.
 6. Set initial `b1`, `b2`, and `k4` to `0`.
 7. Fix exactly `["B1", "B2", "K4"]`.
@@ -42,6 +42,8 @@ The automated pipeline must match the README/screenshot workflow:
    - `reference_preselection=False`
    - `filter_stationary_points=False`
    - `guided_matching=False`
+   - `keep_keypoints=True`
+   - `reset_matches=False`
    - `keypoint_limit=40000`
    - `tiepoint_limit=0`
 9. Align cameras with `adaptive_fitting=True`.
@@ -52,13 +54,24 @@ The automated pipeline must match the README/screenshot workflow:
 14. Run ground-plane alignment as a best-effort step.
 15. Export COLMAP and cubemap images.
 
+For mixed panorama + ordinary/video/photo projects, the GUI defaults to the
+Metashape `backbone` strategy:
+
+1. Import only panorama tracks, set their groups to `Station`, and visually match with retained keypoints.
+2. Align the panorama cameras, restore their groups to `Folder`, and optimize the panorama solution.
+3. Import ordinary video/photo/aerial tracks as `Frame` sensors.
+4. Match again with retained keypoints, then call incremental alignment without resetting the solved panorama cameras.
+5. Run a final conservative global optimization.
+
+Legacy `mixed` configuration values are accepted for compatibility and normalized to this staged workflow.
+
 ## Do Not Regress
 
 - Do not align already-cut cubemap or ERP images. Alignment must use raw dual-fisheye frames.
 - Do not use `Frame` camera type for `.osv` / `.insv` dual-fisheye input.
 - Do not use lowercase fixed parameter names.
 - Do not enable `filter_stationary_points` in the verified workflow.
-- Do not leave groups as `Station` after alignment; release them back to `Folder` before optimization/export.
+- Restore dual-fisheye panorama groups to `Folder` after the panorama solve, before optimization and Frame import.
 
 ## GUI Production Behavior
 
@@ -78,9 +91,9 @@ The automated pipeline must match the README/screenshot workflow:
 
 ```powershell
 python scripts\run_xpano_job.py `
-  --input "F:\3Dregistration\360TEST\qinshi\CAM_20260615223741_0132_D.OSV" `
-  --output "D:\CodeFiles\360gaussain\_acceptance_qinshi_1s_50" `
-  --seconds-per-frame 1 `
+  --input "D:\path\to\camera.osv" `
+  --output ".\_acceptance_qinshi_1s_50" `
+  --frames-per-second 1 `
   --max-frames 50 `
-  --metashape "E:\FastProgram\Metashape\metashape.exe"
+  --metashape "C:\Path\To\Metashape\metashape.exe"
 ```

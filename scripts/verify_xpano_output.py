@@ -1,7 +1,13 @@
 import argparse
 import json
 import struct
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.colmap_backend import find_sparse_model_path
+from scripts.pipeline_backends import COLMAP_BACKEND, METASHAPE_BACKEND, normalize_backend
 
 
 def read_colmap_count(path):
@@ -21,6 +27,7 @@ def assert_expected(name, actual, expected, failures):
 
 def verify_output(
     output_dir,
+    backend=METASHAPE_BACKEND,
     expect_cube_images=None,
     expect_frame_images=None,
     expect_colmap_images=None,
@@ -29,6 +36,15 @@ def verify_output(
     expect_single_sparse=False,
 ):
     output_dir = Path(output_dir)
+    backend = normalize_backend(backend)
+    if backend == COLMAP_BACKEND:
+        return verify_colmap_backend_output(
+            output_dir,
+            expect_colmap_images=expect_colmap_images,
+            expect_colmap_cameras=expect_colmap_cameras,
+            expect_colmap_points=expect_colmap_points,
+            expect_single_sparse=expect_single_sparse,
+        )
     images_dir = output_dir / "images"
     sparse_dir = output_dir / "sparse"
     sparse_zero = sparse_dir / "0"
@@ -67,9 +83,55 @@ def verify_output(
     return result
 
 
+def verify_colmap_backend_output(
+    output_dir,
+    expect_colmap_images=None,
+    expect_colmap_cameras=None,
+    expect_colmap_points=None,
+    expect_single_sparse=False,
+):
+    output_dir = Path(output_dir)
+    colmap_dir = output_dir / "colmap"
+    database_path = colmap_dir / "database.db"
+    image_dir = output_dir / "images"
+    sparse_dir = output_dir / "sparse"
+    sparse_model_path = sparse_dir / "0"
+
+    if not image_dir.exists():
+        raise RuntimeError(f"Missing COLMAP image directory: {image_dir}")
+    if not sparse_model_path.exists():
+        sparse_model_path = find_sparse_model_path(sparse_dir)
+
+    image_files = [path for path in image_dir.rglob("*") if path.is_file()]
+    sparse_models = [path for path in sparse_dir.iterdir() if path.is_dir()] if sparse_dir.exists() else []
+    result = {
+        "backend": COLMAP_BACKEND,
+        "output_dir": str(output_dir),
+        "database_path": str(database_path) if database_path.exists() else "",
+        "image_dir": str(image_dir),
+        "colmap_input_images": len(image_files),
+        "sparse_models": [path.name for path in sparse_models],
+        "sparse_model_path": str(sparse_model_path),
+        "colmap_cameras": read_colmap_count(sparse_model_path / "cameras.bin"),
+        "colmap_images": read_colmap_count(sparse_model_path / "images.bin"),
+        "colmap_points": read_colmap_count(sparse_model_path / "points3D.bin"),
+    }
+
+    failures = []
+    assert_expected("colmap_images", result["colmap_images"], expect_colmap_images, failures)
+    assert_expected("colmap_cameras", result["colmap_cameras"], expect_colmap_cameras, failures)
+    assert_expected("colmap_points", result["colmap_points"], expect_colmap_points, failures)
+    if expect_single_sparse and result["sparse_models"] != ["0"]:
+        failures.append(f"sparse_models: expected ['0'], got {result['sparse_models']}")
+    if failures:
+        raise RuntimeError("; ".join(failures))
+    return result
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Verify xPano COLMAP export structure")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--backend", default=METASHAPE_BACKEND, choices=[METASHAPE_BACKEND, COLMAP_BACKEND])
     parser.add_argument("--expect-cube-images", type=int)
     parser.add_argument("--expect-frame-images", type=int)
     parser.add_argument("--expect-colmap-images", type=int)
@@ -83,6 +145,7 @@ def main():
     args = parse_args()
     result = verify_output(
         args.output,
+        backend=args.backend,
         expect_cube_images=args.expect_cube_images,
         expect_frame_images=args.expect_frame_images,
         expect_colmap_images=args.expect_colmap_images,

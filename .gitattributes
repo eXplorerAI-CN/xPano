@@ -1,0 +1,14 @@
+binaries/** -text
+tools/offline-wheels/** -text
+*.exe binary
+*.dll binary
+*.pyd binary
+*.zip binary
+*.whl binary
+runtime/lichtfeld-studio/** -diff -text
+runtime/lichtfeld-studio/**/*.dll filter=lfs diff=lfs merge=lfs -text
+runtime/lichtfeld-studio/**/*.exe filter=lfs diff=lfs merge=lfs -text
+runtime/lichtfeld-studio/**/*.pyd filter=lfs diff=lfs merge=lfs -text
+runtime/lichtfeld-studio/**/*.ttf filter=lfs diff=lfs merge=lfs -text
+runtime/lichtfeld-studio/**/*.hdr filter=lfs diff=lfs merge=lfs -text
+runtime/lichtfeld-studio/**/*.spv filter=lfs diff=lfs merge=lfs -text

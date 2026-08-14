@@ -1,0 +1,12 @@
+[target.x86_64-pc-windows-msvc]
+linker = "D:\\software\\VisualStuidio\\Professional\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe"
+
+# NOTE: The gnullvm host otherwise imports libunwind.dll before application startup.
+[target.x86_64-pc-windows-gnullvm]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[env]
+LIB = { value = "D:\\software\\VisualStuidio\\Professional\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64;C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64;C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64", force = true }
+INCLUDE = { value = "D:\\software\\VisualStuidio\\Professional\\VC\\Tools\\MSVC\\14.44.35207\\include;C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt;C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um;C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared", force = true }
+CC_x86_64-pc-windows-msvc = { value = "D:\\software\\VisualStuidio\\Professional\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe", force = true }
+CXX_x86_64-pc-windows-msvc = { value = "D:\\software\\VisualStuidio\\Professional\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe", force = true }

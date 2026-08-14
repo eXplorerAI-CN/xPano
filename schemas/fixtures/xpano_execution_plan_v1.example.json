@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "planId": "plan-example-001",
+  "projectId": "project-example-001",
+  "inputRevision": 2,
+  "backend": "metashape",
+  "createdAt": "2026-07-10T05:15:00Z",
+  "nodes": [
+    {
+      "stageId": "metashape.pano.import",
+      "label": "Import panorama frames",
+      "dependsOn": [],
+      "weight": 0.08,
+      "progressMode": "counted",
+      "slowHint": false,
+      "skipReason": null
+    },
+    {
+      "stageId": "metashape.pano.match",
+      "label": "Match panorama features",
+      "dependsOn": ["metashape.pano.import"],
+      "weight": 0.18,
+      "progressMode": "indeterminate",
+      "slowHint": true,
+      "skipReason": null
+    }
+  ]
+}

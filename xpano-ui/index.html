@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>xPano</title>
+    <script>
+      // Apply theme before first paint to prevent flash
+      (function() {
+        var mode = localStorage.getItem('xpano-theme-mode') || 'system';
+        var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.themeMode = mode;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+    <style>
+      /* Loading screen — shown until React mounts */
+      #xpano-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0b1014;
+        transition: opacity 0.35s ease-out;
+      }
+      #xpano-loader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loader-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .loader-logo-wrap {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: loader-pulse 2s ease-in-out infinite;
+      }
+      .loader-logo {
+        width: 24px;
+        height: 22px;
+      }
+      @keyframes loader-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(0.96); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+      .loader-text {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255,255,255,0.48);
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="xpano-loader">
+      <div class="loader-brand">
+        <div class="loader-logo-wrap">
+          <img class="loader-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAeCAMAAAB61OwbAAAAwFBMVEX////W7/qg2vR0yu9Lv+1Qwe0XtOoAregAsOgAsekwuOvI6fnO7PkArOd/z/GT1vOo3fWL0/Lf8/uy4fbm9vz0ucfqfJT2zdXx+/7x8vjnbYjcADL98fRixu7g5O/skKPcADn4/f6xvNjiQWhuhLv64OXaACbB5vjFzeKjr9EsUqP41t0Aqudle7bgHlQAp+YDPpvO1ecAH5EADo3vn7EAAIu5w92GlsROaawAMpYaRp6RoMk5WaWcqc1JZasAJ5IBKqxcAAABgUlEQVR4AWzTVaLiQBBA0Rut4K7PcLfgzv5XhXSjmTm/rWW8M0zLtm3HMg3+x3TF80JXnifhCEFRV/SiF7qJxfmUiF0XRWwrbjkh8a47krxLxUJezIqipeMS8izeZGIhcbK8ZENiQi5fQMlKSBJ8sGLFEpS/vrn58STJJyfB7y9/FbUhLRL8c9WFWol6Xf9QwgQk0tCg2dJ/CEubT9kMdLqUy/q6mEtABOjRr6CkByn+Neww6qMYgzYEdYfkc2jGOE1QZ0LhD1Ar2XGRAH9a+r6tZw1uxtng+sxnDpDRK3aUD51FB/2+hZI0eVdbLClwk3VQqg5vVrMOd04bLZHlobqe+txlBM0nxZ2/2Za4i44zKEtIR1F2iyEPmYGDUqoB6SLwu592uSv+xNwqSqOEtpv2ftGMuEioiFJao3S2sx2Q/bF+bE88sYtoh51a3s/2v4ApajDEM3lYH33/0JtO1E/Cg+u6SNis8rSfnE7Tif5ctp1MJMx2lnfL/XHlcxluAAAxfx59JqGDCAAAAABJRU5ErkJggg==" alt="xPano" /></div>
+        <span class="loader-text">xPano</span>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Fade out loader once React renders into #root
+      var observer = new MutationObserver(function() {
+        if (document.getElementById('root').children.length > 0) {
+          var loader = document.getElementById('xpano-loader');
+          if (loader) {
+            loader.classList.add('fade-out');
+            setTimeout(function() { loader.remove(); }, 400);
+          }
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root'), { childList: true });
+    </script>
+  </body>
+</html>

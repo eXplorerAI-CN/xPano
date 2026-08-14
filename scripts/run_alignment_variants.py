@@ -78,6 +78,17 @@ def add_station_groups(chunk):
     return groups
 
 
+def add_photos_to_group(chunk, image_paths, group):
+    existing_keys = {camera.key for camera in chunk.cameras}
+    chunk.addPhotos([str(path) for path in image_paths], load_xmp_accuracy=True)
+    imported = [camera for camera in chunk.cameras if camera.key not in existing_keys]
+    if len(imported) != len(image_paths):
+        raise RuntimeError(f"Metashape imported an unexpected camera count: expected={len(image_paths)} actual={len(imported)}")
+    # NOTE: Assign groups after import because CameraGroup.key was added in Metashape 2.1.1.
+    for camera in imported:
+        camera.group = group
+
+
 def import_images(chunk, image_paths, import_mode):
     if import_mode == "multiplane":
         filegroups = [2] * (len(image_paths) // 2)
@@ -92,11 +103,7 @@ def import_images(chunk, image_paths, import_mode):
             group = chunk.addCameraGroup()
             group.label = image_paths[idx].parent.name
             group.type = Metashape.CameraGroup.Type.Folder
-            chunk.addPhotos(
-                [str(image_paths[idx]), str(image_paths[idx + 1])],
-                group=group.key,
-                load_xmp_accuracy=True,
-            )
+            add_photos_to_group(chunk, image_paths[idx:idx + 2], group)
     else:
         chunk.addPhotos([str(path) for path in image_paths], load_xmp_accuracy=True)
 

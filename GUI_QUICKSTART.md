@@ -1,63 +1,45 @@
-# GUI Quickstart
+# xPano New UI Quickstart
 
-这是给最终用户看的最短启动说明。完整工作流、CLI 和发布注意事项见 `README.md`。
+This project now uses the Tauri/React UI under `xpano-ui`.
 
-## 1. 安装依赖
+## Start From Source
 
-先确认：
-
-- Python 可通过 `python` 命令启动。
-- `ffmpeg.exe` 已加入 `PATH`。
-- `metashape.exe` 已加入 `PATH`，或设置 `XPANO_METASHAPE` 为完整 exe 路径。
-
-然后运行：
-
-```powershell
-INSTALL_DEPS.bat
+```bat
+RUN_XPANO_UI.bat
 ```
 
-## 2. 启动软件
+The launcher enters `xpano-ui`, installs local UI dependencies when needed, and starts Tauri dev mode.
 
-普通启动：
+## Environment Check
 
-```powershell
-RUN_GUI.bat
+The GUI now runs the same environment check automatically before starting an alignment task.
+To run it manually:
+
+```bat
+CHECK_ENV.bat -Backend colmap
+CHECK_ENV.bat -Backend metashape -MetashapeExe "C:\Path\To\Metashape\metashape.exe"
+CHECK_ENV.bat -Backend colmap -IncludeDensify
 ```
 
-如果窗口闪退或需要看日志：
+The checker verifies app Python packages, ffmpeg/ffprobe, COLMAP or Metashape, Metashape's own Python packages, and optional LichtFeld densification. If `tools\offline-wheels` contains wheels, installation uses those local packages first.
 
-```powershell
-RUN_GUI_DEBUG.bat
+Before building an offline release, refresh the bundled wheels:
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\download_offline_wheels.ps1 -Root .
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install_embedded_python.ps1 -Root .
 ```
 
-调试日志会写入：
+## Release Package
 
-```text
-xpano_gui_error.log
+In a packaged release, run:
+
+```bat
+RUN_XPANO.bat
 ```
 
-## 3. 基本操作
+## Notes
 
-1. 在“素材轨”中添加全景视频，选择 `.osv` / `.insv` 文件。
-2. 选择输出文件夹。
-3. 检查 Metashape 路径是否正确。
-4. 输入抽帧间隔，单位是秒/帧，推荐 `1.0`。
-5. 帧数限制可留空；快速测试可填 `50`。
-6. 点击开始。
-
-## 4. 输出结果
-
-输出文件夹内会生成：
-
-```text
-work\xpano.psx
-work\xpano_manifest.json
-xpano_alignment_summary.txt
-xpano_run_summary.json
-images\*.jpg
-sparse\0\cameras.bin
-sparse\0\images.bin
-sparse\0\points3D.bin
-```
-
-`sparse\0` 和 `images` 可以作为 COLMAP 数据输入到 3DGS/NeRF 流程。
+- COLMAP mode uses the bundled `tools/colmap` when present.
+- Metashape mode still requires a local licensed Metashape installation.
+- LichtFeld densification is available from the point cloud viewer after a reconstruction is loaded.

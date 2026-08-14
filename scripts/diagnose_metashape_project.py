@@ -11,6 +11,10 @@ def parse_args():
     parser.add_argument("--project", required=True)
     parser.add_argument("--expect-cameras", type=int)
     parser.add_argument("--expect-aligned", type=int)
+    parser.add_argument("--expect-panorama-cameras", type=int)
+    parser.add_argument("--expect-panorama-aligned", type=int)
+    parser.add_argument("--expect-frame-cameras", type=int)
+    parser.add_argument("--expect-frame-aligned", type=int)
     parser.add_argument("--expect-groups", type=int)
     parser.add_argument("--expect-sensors", type=int)
     parser.add_argument("--expect-fisheye-sensors", type=int)
@@ -36,6 +40,18 @@ def main():
 
     cameras = list(chunk.cameras)
     aligned = [camera for camera in cameras if camera.transform]
+    panorama_cameras = [
+        camera
+        for camera in cameras
+        if camera.sensor and camera.sensor.type == Metashape.Sensor.Type.Fisheye
+    ]
+    panorama_aligned = [camera for camera in panorama_cameras if camera.transform]
+    frame_cameras = [
+        camera
+        for camera in cameras
+        if camera.sensor and camera.sensor.type == Metashape.Sensor.Type.Frame
+    ]
+    frame_aligned = [camera for camera in frame_cameras if camera.transform]
     groups = list(chunk.camera_groups)
     sensors = list(chunk.sensors)
     fisheye_sensors = [sensor for sensor in sensors if sensor.type == Metashape.Sensor.Type.Fisheye]
@@ -46,6 +62,10 @@ def main():
     group_counts = Counter(camera.group.label if camera.group else "<none>" for camera in cameras)
 
     print(f"cameras={len(cameras)} aligned={len(aligned)} groups={len(groups)} sensors={len(sensors)}")
+    print(
+        f"panorama_cameras={len(panorama_cameras)} panorama_aligned={len(panorama_aligned)} "
+        f"frame_cameras={len(frame_cameras)} frame_aligned={len(frame_aligned)}"
+    )
     print(
         f"fisheye_sensors={len(fisheye_sensors)} frame_sensors={len(frame_sensors)} "
         f"folder_groups={len(folder_groups)} station_groups={len(station_groups)}"
@@ -99,6 +119,10 @@ def main():
     failures = []
     assert_expected("cameras", len(cameras), args.expect_cameras, failures)
     assert_expected("aligned", len(aligned), args.expect_aligned, failures)
+    assert_expected("panorama_cameras", len(panorama_cameras), args.expect_panorama_cameras, failures)
+    assert_expected("panorama_aligned", len(panorama_aligned), args.expect_panorama_aligned, failures)
+    assert_expected("frame_cameras", len(frame_cameras), args.expect_frame_cameras, failures)
+    assert_expected("frame_aligned", len(frame_aligned), args.expect_frame_aligned, failures)
     assert_expected("groups", len(groups), args.expect_groups, failures)
     assert_expected("sensors", len(sensors), args.expect_sensors, failures)
     assert_expected("fisheye_sensors", len(fisheye_sensors), args.expect_fisheye_sensors, failures)

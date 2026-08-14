@@ -1,0 +1,33 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "com.xpano.app",
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "resources": {
+      "../../build/release-stage/binaries/": "binaries/",
+      "../../build/release-stage/scripts/": "scripts/",
+      "../../build/release-stage/tools/": "tools/",
+      "../../build/release-stage/runtime/": "runtime/",
+      "../../build/release-stage/luts/": "luts/",
+      "../../build/release-stage/WebView2Loader.dll": "WebView2Loader.dll",
+      "../../build/release-stage/requirements.txt": "requirements.txt",
+      "../../build/release-stage/metashape_requirements.txt": "metashape_requirements.txt",
+      "../../build/release-stage/release-manifest.json": "release-manifest.json"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      },
+      "allowDowngrades": false,
+      "nsis": {
+        "compression": "lzma",
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false,
+        "startMenuFolder": "xPano",
+        "installerHooks": "windows/nsis-hooks.nsh"
+      }
+    }
+  }
+}
