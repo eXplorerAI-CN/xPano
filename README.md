@@ -7,11 +7,11 @@ xPano 是一套 Windows 桌面工作流，用于将全景视频、普通视频�
 - [官方安装包](https://pubres.explorerglobal.cn/Beluga/xpano-release/xPano-setup.exe)
 - [网盘备用镜像](https://pan.baidu.com/s/1jfdjtZRJlDJnhq0BP9MfSw?pwd=1234)
 
+## 核心功能
+
 ```text
 导入素材 -> 准备素材 -> 对齐与重建 -> 查看成果 -> 致密化或高斯训练
 ```
-
-## 核心功能
 
 - 导入 DJI `.osv`、Insta360 `.insv`、普通视频、照片文件夹和航拍照片。
 - 视频抽帧，并渐进加载大规模照片文件夹预览。
