@@ -2,6 +2,11 @@
 
 xPano 是一套 Windows 桌面工作流，用于将全景视频、普通视频和照片处理为可用于 COLMAP 重建、点云查看、致密化和高斯训练的数据。
 
+## 下载地址
+
+- [官方安装包](https://pubres.explorerglobal.cn/Beluga/xpano-release/xPano-setup.exe)
+- [网盘备用镜像](https://pan.baidu.com/s/1jfdjtZRJlDJnhq0BP9MfSw?pwd=1234)
+
 ```text
 导入素材 -> 准备素材 -> 对齐与重建 -> 查看成果 -> 致密化或高斯训练
 ```
